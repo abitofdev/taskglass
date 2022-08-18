@@ -8,6 +8,8 @@ import { AzureDevOpsServicesSource } from './azuredevops/sources/azure-devops-se
 import { AzureDevOpsSource } from './azuredevops/sources/azure-devops-source';
 import { WorkItemRelation, WorkItemRelationType } from './azuredevops/work-item-relation.interface';
 import { WorkItem } from './azuredevops/work-item.interface';
+import { SourceControlInputBox, SourceControl } from 'vscode';
+import { GitExtension } from '../typings/git';
 
 export async function activate(context: vscode.ExtensionContext) {
   context.subscriptions.push(
@@ -48,6 +50,42 @@ export async function activate(context: vscode.ExtensionContext) {
       const workItemsTree = await getWorkItemDetailHierarchy(devOpsSource, workItems);
       treeDataProvider.refresh(workItemsTree);
     }
+  });
+
+  vscode.commands.registerCommand('taskSearch.copyWorkItemId', async (workItem: WorkItem) => {
+    await vscode.env.clipboard.writeText(workItem.id.toString());
+  });
+
+  vscode.commands.registerCommand('taskSearch.associateWorkItemId', async (workItem: WorkItem) => {
+    const vscodeGit = vscode.extensions.getExtension<GitExtension>('vscode.git');
+    const gitExtension = vscodeGit?.exports;
+
+    if (!gitExtension || !gitExtension?.enabled) {
+      vscode.window.showErrorMessage('Git extension is not enabled');
+      return;
+    }
+
+    const workspaceFolder = vscode.workspace.workspaceFolders?.[0];
+    if (!workspaceFolder) {
+      vscode.window.showErrorMessage('No workspace folder found');
+      return;
+    }
+
+    const gitRepository = gitExtension.getAPI(1).getRepository(workspaceFolder.uri);
+    if (!gitRepository) {
+      vscode.window.showErrorMessage('No git repository found for active workspace');
+      return;
+    }
+
+    if (gitRepository.inputBox.value.includes(`#${workItem.id}`)) {
+      return;
+    }
+
+    if (!gitRepository.inputBox.value.endsWith(' ')) {
+      gitRepository.inputBox.value += ' ';
+    }
+
+    gitRepository.inputBox.value += `#${workItem.id}`;
   });
 
   let disposable = vscode.commands.registerCommand(

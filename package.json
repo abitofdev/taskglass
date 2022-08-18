@@ -16,6 +16,15 @@
   ],
   "main": "./out/extension.js",
   "contributes": {
+    "icons": {
+      "associate-work-item": {
+        "description": "Associate work item to commit",
+        "default": {
+          "fontPath": "./resources/icons.woff",
+          "fontCharacter": "\\e900"
+        }
+      }
+    },
     "commands": [
       {
         "command": "vscode-AzureDevOpsPatAuthenticationProvider-sample.login",
@@ -26,6 +35,18 @@
         "title": "Refresh",
         "category": "Tasks",
         "icon": "$(refresh)"
+      },
+      {
+        "command": "taskSearch.copyWorkItemId",
+        "title": "Copy Work Item Id",
+        "category": "Tasks",
+        "icon": "$(copy)"
+      },
+      {
+        "command": "taskSearch.associateWorkItemId",
+        "title": "Associate Work Item With Commit",
+        "category": "Tasks",
+        "icon": "$(associate-work-item)"
       }
     ],
     "views": {
@@ -42,6 +63,28 @@
           "command": "taskSearch.refreshWorkItems",
           "when": "view == taskSearch",
           "group": "navigation"
+        }
+      ],
+      "view/item/context": [
+        {
+          "command": "taskSearch.copyWorkItemId",
+          "when": "view == taskSearch",
+          "group": "inline"
+        },
+        {
+          "command": "taskSearch.associateWorkItemId",
+          "when": "view == taskSearch",
+          "group": "inline"
+        }
+      ],
+      "commandPalette": [
+        {
+          "command": "taskSearch.copyWorkItemId",
+          "when": "false"
+        },
+        {
+          "command": "taskSearch.associateWorkItemId",
+          "when": "false"
         }
       ]
     },
