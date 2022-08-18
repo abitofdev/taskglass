@@ -2,7 +2,10 @@ import 'isomorphic-fetch';
 import * as vscode from 'vscode';
 import { AzureDevOpsPatAuthenticationProvider } from './auth/azuredevops-pat-auth-provider';
 import { AzureDevOpsTreeDataProvider } from './azuredevops-tree-data-provider';
+import { AzureDevOpsUrlBuilder } from './azuredevops/azure-devops-url-builder';
 import { HierarchicalWorkItem } from './azuredevops/hierarchical-work-item.interface';
+import { AzureDevOpsServicesSource } from './azuredevops/sources/azure-devops-services-source';
+import { AzureDevOpsSource } from './azuredevops/sources/azure-devops-source';
 import { WorkItemRelation, WorkItemRelationType } from './azuredevops/work-item-relation.interface';
 import { WorkItem } from './azuredevops/work-item.interface';
 
@@ -15,12 +18,28 @@ export async function activate(context: vscode.ExtensionContext) {
     )
   );
 
-  getWorkItems().then(async (x) => {
-    const workItems = await getWorkItemDetailHierarchy(x);
-    const treeDataProvider = new AzureDevOpsTreeDataProvider(workItems);
+  const devOpsSource = new AzureDevOpsServicesSource('ashleycanham1');
 
-		context.subscriptions.push(vscode.window.createTreeView('taskSearch', { treeDataProvider }));
-  });
+  vscode.window.withProgress(
+    {
+      location: vscode.ProgressLocation.Window,
+      cancellable: false,
+      title: 'Loading work items',
+    },
+    async (progress) => {
+      progress.report({ increment: 0 });
+
+      const workItems = await getWorkItems(devOpsSource);
+      const workItemsTree = await getWorkItemDetailHierarchy(devOpsSource, workItems);
+      const treeDataProvider = new AzureDevOpsTreeDataProvider(workItemsTree);
+
+      console.log(context.globalStorageUri);
+
+      context.subscriptions.push(vscode.window.createTreeView('taskSearch', { treeDataProvider }));
+
+      progress.report({ increment: 100 });
+    }
+  );
 
   let disposable = vscode.commands.registerCommand(
     'vscode-AzureDevOpsPatAuthenticationProvider-sample.login',
@@ -61,21 +80,21 @@ export async function activate(context: vscode.ExtensionContext) {
 // this method is called when your extension is deactivated
 export function deactivate() {}
 
-async function getWorkItems(): Promise<ReadonlyArray<number>> {
+async function getWorkItems(source: AzureDevOpsSource): Promise<ReadonlyArray<number>> {
   const session = await vscode.authentication.getSession(AzureDevOpsPatAuthenticationProvider.id, [], {
     createIfNone: true,
   });
 
-  const workItemsUrl = 'https://dev.azure.com/ashleycanham1/test_agiile/_apis/wit/wiql';
+  const workItemsUrl = new AzureDevOpsUrlBuilder(source).withTeam('test_agiile').withRoute('_apis/wit/wiql').toString();
+
   const searchQuery =
     "Select [System.Id], [System.AssignedTo], [System.State], [System.Title], [System.Tags] From WorkItems Where [State] <> 'Closed' AND [State] <> 'Removed' order by [Microsoft.VSTS.Common.Priority] asc, [System.CreatedDate] desc";
 
-  const fullUrl = workItemsUrl + '?' + new URLSearchParams({ 'api-version': '6.0' });
   const body = JSON.stringify({
     query: searchQuery,
   });
 
-  const response = await fetch(fullUrl, {
+  const response = await fetch(workItemsUrl, {
     method: 'POST',
     headers: {
       Accept: 'application/json',
@@ -93,8 +112,11 @@ async function getWorkItems(): Promise<ReadonlyArray<number>> {
   return (bodyJson.workItems as any[]).map((x) => Number(x.id));
 }
 
-async function getWorkItemDetailHierarchy(ids: ReadonlyArray<number>): Promise<ReadonlyArray<HierarchicalWorkItem>> {
-  const workItems = await getWorkItemDetailFlat(ids);
+async function getWorkItemDetailHierarchy(
+  source: AzureDevOpsSource,
+  ids: ReadonlyArray<number>
+): Promise<ReadonlyArray<HierarchicalWorkItem>> {
+  const workItems = await getWorkItemDetailFlat(source, ids);
 
   const treeWorkItems = workItems.map<HierarchicalWorkItem>((x) => ({ ...x, children: [] }));
   const roots: HierarchicalWorkItem[] = [];
@@ -124,24 +146,24 @@ async function getWorkItemDetailHierarchy(ids: ReadonlyArray<number>): Promise<R
   return roots;
 }
 
-async function getWorkItemDetailFlat(ids: ReadonlyArray<number>): Promise<ReadonlyArray<WorkItem>> {
+async function getWorkItemDetailFlat(
+  source: AzureDevOpsSource,
+  ids: ReadonlyArray<number>
+): Promise<ReadonlyArray<WorkItem>> {
   //todo: chunk requests into blocks of 500
 
   const session = await vscode.authentication.getSession(AzureDevOpsPatAuthenticationProvider.id, [], {
     createIfNone: true,
   });
 
-  const workItemsUrl = 'https://dev.azure.com/ashleycanham1/test_agiile/_apis/wit/workitems';
-  const fullUrl =
-    workItemsUrl +
-    '?' +
-    new URLSearchParams({
-      'api-version': '6.0',
-      ids: ids.join(','),
-      $expand: 'relations',
-    });
+  const url = new AzureDevOpsUrlBuilder(source)
+    .withTeam('test_agiile')
+    .withRoute('_apis/wit/workitems')
+    .withQueryParam('ids', ids.join(','))
+    .withQueryParam('$expand', 'relations')
+    .toString();
 
-  const response = await fetch(fullUrl, {
+  const response = await fetch(url, {
     method: 'GET',
     headers: {
       Accept: 'application/json',

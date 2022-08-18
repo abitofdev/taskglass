@@ -11,6 +11,7 @@ export class AzureDevOpsTreeDataProvider implements vscode.TreeDataProvider<Hier
     );
 
     treeItem.tooltip = `${element.type}-${element.title}`;
+    treeItem.description =  '#' + element.id;
     return treeItem;
   }
 
