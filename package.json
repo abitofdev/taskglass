@@ -20,6 +20,12 @@
       {
         "command": "vscode-AzureDevOpsPatAuthenticationProvider-sample.login",
         "title": "Login with Azure DevOps"
+      },
+      {
+        "command": "taskSearch.refreshWorkItems",
+        "title": "Refresh",
+        "category": "Tasks",
+        "icon": "$(refresh)"
       }
     ],
     "views": {
@@ -27,6 +33,15 @@
         {
           "id": "taskSearch",
           "name": "Task Search"
+        }
+      ]
+    },
+    "menus": {
+      "view/title": [
+        {
+          "command": "taskSearch.refreshWorkItems",
+          "when": "view == taskSearch",
+          "group": "navigation"
         }
       ]
     },

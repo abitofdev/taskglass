@@ -2,7 +2,9 @@ import * as vscode from 'vscode';
 import { HierarchicalWorkItem } from './azuredevops/hierarchical-work-item.interface';
 
 export class AzureDevOpsTreeDataProvider implements vscode.TreeDataProvider<HierarchicalWorkItem> {
-  constructor(private readonly _workItems: ReadonlyArray<HierarchicalWorkItem>) {}
+  private _onDidChangeTreeData = new vscode.EventEmitter<void>();
+
+  constructor(private _workItems: ReadonlyArray<HierarchicalWorkItem>) {}
 
   public getTreeItem(element: HierarchicalWorkItem): vscode.TreeItem {
     const treeItem = new vscode.TreeItem(
@@ -11,7 +13,7 @@ export class AzureDevOpsTreeDataProvider implements vscode.TreeDataProvider<Hier
     );
 
     treeItem.tooltip = `${element.type}-${element.title}`;
-    treeItem.description =  '#' + element.id;
+    treeItem.description = '#' + element.id;
     return treeItem;
   }
 
@@ -21,5 +23,14 @@ export class AzureDevOpsTreeDataProvider implements vscode.TreeDataProvider<Hier
     }
 
     return element.children;
+  }
+
+  public refresh(updatedWorkItems: ReadonlyArray<HierarchicalWorkItem>): void {
+    this._workItems = updatedWorkItems;
+    this._onDidChangeTreeData.fire();
+  }
+
+  public get onDidChangeTreeData(): vscode.Event<void> {
+    return this._onDidChangeTreeData.event;
   }
 }

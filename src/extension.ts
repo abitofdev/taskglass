@@ -19,6 +19,7 @@ export async function activate(context: vscode.ExtensionContext) {
   );
 
   const devOpsSource = new AzureDevOpsServicesSource('ashleycanham1');
+  let treeDataProvider: AzureDevOpsTreeDataProvider;
 
   vscode.window.withProgress(
     {
@@ -31,7 +32,7 @@ export async function activate(context: vscode.ExtensionContext) {
 
       const workItems = await getWorkItems(devOpsSource);
       const workItemsTree = await getWorkItemDetailHierarchy(devOpsSource, workItems);
-      const treeDataProvider = new AzureDevOpsTreeDataProvider(workItemsTree);
+      treeDataProvider = new AzureDevOpsTreeDataProvider(workItemsTree);
 
       console.log(context.globalStorageUri);
 
@@ -40,6 +41,14 @@ export async function activate(context: vscode.ExtensionContext) {
       progress.report({ increment: 100 });
     }
   );
+
+  vscode.commands.registerCommand('taskSearch.refreshWorkItems', async () => {
+    if (treeDataProvider) {
+      const workItems = await getWorkItems(devOpsSource);
+      const workItemsTree = await getWorkItemDetailHierarchy(devOpsSource, workItems);
+      treeDataProvider.refresh(workItemsTree);
+    }
+  });
 
   let disposable = vscode.commands.registerCommand(
     'vscode-AzureDevOpsPatAuthenticationProvider-sample.login',
