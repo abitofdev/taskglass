@@ -10,6 +10,7 @@ import { WorkItemRelation, WorkItemRelationType } from './azuredevops/work-item-
 import { WorkItem } from './azuredevops/work-item.interface';
 import { SourceControlInputBox, SourceControl } from 'vscode';
 import { GitExtension } from '../typings/git';
+import { Git } from './git';
 
 export async function activate(context: vscode.ExtensionContext) {
   context.subscriptions.push(
@@ -57,10 +58,9 @@ export async function activate(context: vscode.ExtensionContext) {
   });
 
   vscode.commands.registerCommand('taskSearch.associateWorkItemId', async (workItem: WorkItem) => {
-    const vscodeGit = vscode.extensions.getExtension<GitExtension>('vscode.git');
-    const gitExtension = vscodeGit?.exports;
+    const gitExtension = Git.getGitExtension();
 
-    if (!gitExtension || !gitExtension?.enabled) {
+    if (!gitExtension) {
       vscode.window.showErrorMessage('Git extension is not enabled');
       return;
     }
@@ -71,7 +71,7 @@ export async function activate(context: vscode.ExtensionContext) {
       return;
     }
 
-    const gitRepository = gitExtension.getAPI(1).getRepository(workspaceFolder.uri);
+    const gitRepository = Git.getRepository(workspaceFolder.uri);
     if (!gitRepository) {
       vscode.window.showErrorMessage('No git repository found for active workspace');
       return;
