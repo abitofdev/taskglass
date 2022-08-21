@@ -8,9 +8,10 @@ import { AzureDevOpsServicesSource } from './azuredevops/sources/azure-devops-se
 import { AzureDevOpsSource } from './azuredevops/sources/azure-devops-source';
 import { WorkItemRelation, WorkItemRelationType } from './azuredevops/work-item-relation.interface';
 import { WorkItem } from './azuredevops/work-item.interface';
-import { SourceControlInputBox, SourceControl } from 'vscode';
-import { GitExtension } from '../typings/git';
 import { Git } from './git';
+import { AzureDevOpsServicesSettings } from './settings/azure-devops-services-settings.interface';
+import { AzureDevOpsServerSettings } from './settings/azure-devops-server-settings.interface';
+import { AzureDevOpsServerSource } from './azuredevops/sources/azure-devops-server-source';
 
 export async function activate(context: vscode.ExtensionContext) {
   context.subscriptions.push(
@@ -21,36 +22,16 @@ export async function activate(context: vscode.ExtensionContext) {
     )
   );
 
-  const devOpsSource = new AzureDevOpsServicesSource('ashleycanham1');
-  let treeDataProvider: AzureDevOpsTreeDataProvider;
+  //todo: to use for the images
+  console.log(context.globalStorageUri);
 
-  vscode.window.withProgress(
-    {
-      location: vscode.ProgressLocation.Window,
-      cancellable: false,
-      title: 'Loading work items',
-    },
-    async (progress) => {
-      progress.report({ increment: 0 });
+  const treeDataProvider = new AzureDevOpsTreeDataProvider([]);
+  context.subscriptions.push(vscode.window.createTreeView('taskSearch', { treeDataProvider }));
 
-      const workItems = await getWorkItems(devOpsSource);
-      const workItemsTree = await getWorkItemDetailHierarchy(devOpsSource, workItems);
-      treeDataProvider = new AzureDevOpsTreeDataProvider(workItemsTree);
-
-      console.log(context.globalStorageUri);
-
-      context.subscriptions.push(vscode.window.createTreeView('taskSearch', { treeDataProvider }));
-
-      progress.report({ increment: 100 });
-    }
-  );
+  refreshWorkItemsAsync(treeDataProvider);
 
   vscode.commands.registerCommand('taskSearch.refreshWorkItems', async () => {
-    if (treeDataProvider) {
-      const workItems = await getWorkItems(devOpsSource);
-      const workItemsTree = await getWorkItemDetailHierarchy(devOpsSource, workItems);
-      treeDataProvider.refresh(workItemsTree);
-    }
+    refreshWorkItemsAsync(treeDataProvider);
   });
 
   vscode.commands.registerCommand('taskSearch.copyWorkItemId', async (workItem: WorkItem) => {
@@ -87,45 +68,64 @@ export async function activate(context: vscode.ExtensionContext) {
 
     gitRepository.inputBox.value += `#${workItem.id}`;
   });
-
-  let disposable = vscode.commands.registerCommand(
-    'vscode-AzureDevOpsPatAuthenticationProvider-sample.login',
-    async () => {
-      // Get our PAT session.
-      const session = await vscode.authentication.getSession(AzureDevOpsPatAuthenticationProvider.id, [], {
-        createIfNone: true,
-      });
-
-      try {
-        // Make a request to the Azure DevOps API. Keep in mind that this particular API only works with PAT's with
-        // 'all organizations' access.
-        const req = await fetch('https://app.vssps.visualstudio.com/_apis/profile/profiles/me?api-version=6.0', {
-          headers: {
-            authorization: `Basic ${Buffer.from(`:${session.accessToken}`).toString('base64')}`,
-            'content-type': 'application/json',
-          },
-        });
-        if (!req.ok) {
-          throw new Error(req.statusText);
-        }
-        const res = (await req.json()) as { displayName: string };
-        vscode.window.showInformationMessage(`Hello ${res.displayName}`);
-      } catch (e: any) {
-        if (e.message === 'Unauthorized') {
-          vscode.window.showErrorMessage(
-            'Failed to get profile. You need to use a PAT that has access to all organizations. Please sign out and try again.'
-          );
-        }
-        throw e;
-      }
-    }
-  );
-
-  context.subscriptions.push(disposable);
 }
 
 // this method is called when your extension is deactivated
 export function deactivate() {}
+
+async function refreshWorkItemsAsync(treeDataProvider: AzureDevOpsTreeDataProvider) {
+  const source = getAzureDevOpsSource();
+  if (!source) {
+    return;
+  }
+
+  await vscode.window.withProgress(
+    {
+      location: vscode.ProgressLocation.Window,
+      cancellable: false,
+      title: 'Loading work items',
+    },
+    async (progress) => {
+      progress.report({ increment: 0 });
+
+      const workItems = await getWorkItems(source);
+      const workItemsTree = await getWorkItemDetailHierarchy(source, workItems);
+      treeDataProvider.refresh(workItemsTree);
+
+      progress.report({ increment: 100 });
+    }
+  );
+}
+
+function getAzureDevOpsSource(): AzureDevOpsSource | undefined {
+  const workspaceConfig = vscode.workspace.getConfiguration('tasks');
+  const activeSource = workspaceConfig.get<string>('activeSource');
+
+  switch (activeSource) {
+    case 'AzureDevOps Services':
+      const serviceSettings = workspaceConfig.get<AzureDevOpsServicesSettings>('azureDevopsServices');
+      if (!serviceSettings) {
+        vscode.window.showErrorMessage('The Azure DevOps Services settings must be defined');
+        return undefined;
+      }
+
+      return new AzureDevOpsServicesSource(serviceSettings.organization);
+    case 'AzureDevOps Server 2020':
+      const serverSettings = workspaceConfig.get<AzureDevOpsServerSettings>('azureDevopsServer2020');
+      if (!serverSettings) {
+        vscode.window.showErrorMessage('The Azure DevOps Server 2020 settings must be defined');
+        return undefined;
+      }
+      return new AzureDevOpsServerSource(
+        serverSettings.scheme,
+        serverSettings.instance,
+        serverSettings.collection,
+        serverSettings.port
+      );
+  }
+
+  return undefined;
+}
 
 async function getWorkItems(source: AzureDevOpsSource): Promise<ReadonlyArray<number>> {
   const session = await vscode.authentication.getSession(AzureDevOpsPatAuthenticationProvider.id, [], {
