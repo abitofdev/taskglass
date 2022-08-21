@@ -8,7 +8,7 @@ export class AzureDevOpsUrlBuilder {
 
   constructor(private readonly _source: AzureDevOpsSource) {}
 
-  public withTeam(teamName: string): AzureDevOpsUrlBuilder {
+  public withProject(teamName: string): AzureDevOpsUrlBuilder {
     this._routeParts.unshift(teamName);
     return this;
   }

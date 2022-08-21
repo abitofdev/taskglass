@@ -38,6 +38,17 @@ export async function activate(context: vscode.ExtensionContext) {
     await vscode.env.clipboard.writeText(workItem.id.toString());
   });
 
+  vscode.commands.registerCommand('taskSearch.changeProjects', async () => {
+    const newProject = await selectProjectAsync();
+    if (!newProject) {
+      return;
+    }
+
+    const workspaceConfig = vscode.workspace.getConfiguration('tasks');
+    await workspaceConfig.update('activeProject', newProject, vscode.ConfigurationTarget.Global);
+    vscode.commands.executeCommand('taskSearch.refreshWorkItems');
+  });
+
   vscode.commands.registerCommand('taskSearch.associateWorkItemId', async (workItem: WorkItem) => {
     const gitExtension = Git.getGitExtension();
 
@@ -73,9 +84,25 @@ export async function activate(context: vscode.ExtensionContext) {
 // this method is called when your extension is deactivated
 export function deactivate() {}
 
+async function selectProjectAsync(): Promise<string | undefined> {
+  const source = getAzureDevOpsSource();
+  if (!source) {
+    return undefined;
+  }
+
+  const projects = await getProjectsAsync(source);
+  const selected = await vscode.window.showQuickPick(projects, { canPickMany: false, title: 'Select a project' });
+  return selected;
+}
+
 async function refreshWorkItemsAsync(treeDataProvider: AzureDevOpsTreeDataProvider) {
   const source = getAzureDevOpsSource();
   if (!source) {
+    return;
+  }
+  const project = getSavedActiveProject();
+  if (!project) {
+    vscode.window.showErrorMessage('No active project selected');
     return;
   }
 
@@ -88,8 +115,8 @@ async function refreshWorkItemsAsync(treeDataProvider: AzureDevOpsTreeDataProvid
     async (progress) => {
       progress.report({ increment: 0 });
 
-      const workItems = await getWorkItems(source);
-      const workItemsTree = await getWorkItemDetailHierarchy(source, workItems);
+      const workItems = await getWorkItems(source, project);
+      const workItemsTree = await getWorkItemDetailHierarchy(source, project, workItems);
       treeDataProvider.refresh(workItemsTree);
 
       progress.report({ increment: 100 });
@@ -127,15 +154,46 @@ function getAzureDevOpsSource(): AzureDevOpsSource | undefined {
   return undefined;
 }
 
-async function getWorkItems(source: AzureDevOpsSource): Promise<ReadonlyArray<number>> {
+function getSavedActiveProject(): string | undefined {
+  const workspaceConfig = vscode.workspace.getConfiguration('tasks');
+  return workspaceConfig.get<string>('activeProject');
+}
+
+async function getProjectsAsync(source: AzureDevOpsSource): Promise<ReadonlyArray<string>> {
   const session = await vscode.authentication.getSession(AzureDevOpsPatAuthenticationProvider.id, [], {
     createIfNone: true,
   });
 
-  const workItemsUrl = new AzureDevOpsUrlBuilder(source).withTeam('test_agiile').withRoute('_apis/wit/wiql').toString();
+  const allProjectsUrl = new AzureDevOpsUrlBuilder(source).withRoute('_apis/projects').toString();
+  const response = await fetch(allProjectsUrl, {
+    method: 'GET',
+    headers: {
+      Accept: 'application/json',
+      'Content-Type': 'application/json',
+      Authorization: `Basic ${Buffer.from(`:${session.accessToken}`).toString('base64')}`,
+    },
+  });
+
+  if (!response.ok) {
+    throw new Error(response.statusText);
+  }
+
+  const bodyJson = await response.json();
+  return (bodyJson.value as any[]).map<string>((x: any) => x.name);
+}
+
+async function getWorkItems(source: AzureDevOpsSource, project: string): Promise<ReadonlyArray<number>> {
+  const session = await vscode.authentication.getSession(AzureDevOpsPatAuthenticationProvider.id, [], {
+    createIfNone: true,
+  });
+
+  const workItemsUrl = new AzureDevOpsUrlBuilder(source).withProject(project).withRoute('_apis/wit/wiql').toString();
 
   const searchQuery =
-    "Select [System.Id], [System.AssignedTo], [System.State], [System.Title], [System.Tags] From WorkItems Where [State] <> 'Closed' AND [State] <> 'Removed' order by [Microsoft.VSTS.Common.Priority] asc, [System.CreatedDate] desc";
+    'Select [System.Id], [System.AssignedTo], [System.State], [System.Title], [System.Tags] ' +
+    'From WorkItems ' +
+    `Where [System.TeamProject] = '${project}' AND [State] <> 'Closed' AND [State] <> 'Removed' ` +
+    'order by [Microsoft.VSTS.Common.Priority] asc, [System.CreatedDate] desc';
 
   const body = JSON.stringify({
     query: searchQuery,
@@ -161,9 +219,10 @@ async function getWorkItems(source: AzureDevOpsSource): Promise<ReadonlyArray<nu
 
 async function getWorkItemDetailHierarchy(
   source: AzureDevOpsSource,
+  project: string,
   ids: ReadonlyArray<number>
 ): Promise<ReadonlyArray<HierarchicalWorkItem>> {
-  const workItems = await getWorkItemDetailFlat(source, ids);
+  const workItems = await getWorkItemDetailFlat(source, project, ids);
 
   const treeWorkItems = workItems.map<HierarchicalWorkItem>((x) => ({ ...x, children: [] }));
   const roots: HierarchicalWorkItem[] = [];
@@ -195,16 +254,21 @@ async function getWorkItemDetailHierarchy(
 
 async function getWorkItemDetailFlat(
   source: AzureDevOpsSource,
+  project: string,
   ids: ReadonlyArray<number>
 ): Promise<ReadonlyArray<WorkItem>> {
   //todo: chunk requests into blocks of 500
+
+  if (ids.length === 0) {
+    return [];
+  }
 
   const session = await vscode.authentication.getSession(AzureDevOpsPatAuthenticationProvider.id, [], {
     createIfNone: true,
   });
 
   const url = new AzureDevOpsUrlBuilder(source)
-    .withTeam('test_agiile')
+    .withProject(project)
     .withRoute('_apis/wit/workitems')
     .withQueryParam('ids', ids.join(','))
     .withQueryParam('$expand', 'relations')

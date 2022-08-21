@@ -112,6 +112,12 @@
         "title": "Associate Work Item With Commit",
         "category": "Tasks",
         "icon": "$(associate-work-item)"
+      },
+      {
+        "command": "taskSearch.changeProjects",
+        "title": "Change Projects",
+        "category": "Tasks",
+        "icon": "$(plug)"
       }
     ],
     "views": {
@@ -126,6 +132,11 @@
       "view/title": [
         {
           "command": "taskSearch.refreshWorkItems",
+          "when": "view == taskSearch",
+          "group": "navigation"
+        },
+        {
+          "command": "taskSearch.changeProjects",
           "when": "view == taskSearch",
           "group": "navigation"
         }
