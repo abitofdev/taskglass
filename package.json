@@ -1,16 +1,23 @@
 {
-  "name": "tasks",
-  "displayName": "tasks",
+  "name": "taskglass",
+  "displayName": "Task Glass",
   "description": "Does something todo with tasks",
   "version": "0.0.1",
   "engines": {
     "vscode": "^1.70.0"
   },
+  "keywords": [
+    "Azure DevOps",
+    "Azure DevOps Server 2020",
+    "Azure DevOps Services",
+    "Work Items",
+    "Tasks"
+  ],
   "categories": [
     "Other"
   ],
   "activationEvents": [
-    "onView:taskSearch",
+    "onView:taskglass",
     "onCommand:vscode-AzureDevOpsPatAuthenticationProvider-sample.login",
     "onAuthenticationRequest:AzureDevOpsPAT"
   ],
@@ -18,7 +25,7 @@
   "contributes": {
     "configuration": {
       "properties": {
-        "tasks.activeSource": {
+        "taskglass.activeSource": {
           "type": "string",
           "default": "AzureDevOps Services",
           "description": "The active source to use for tasks",
@@ -32,7 +39,7 @@
             "The self-hosted version, of Azure DevOps 2020."
           ]
         },
-        "tasks.azureDevopsServices": {
+        "taskglass.azureDevopsServices": {
           "type": "object",
           "title": "Azure DevOps Services",
           "description": "The configuration settings for use with Azure DevOps Services",
@@ -46,7 +53,7 @@
             }
           }
         },
-        "tasks.azureDevopsServer2020": {
+        "taskglass.azureDevopsServer2020": {
           "type": "object",
           "title": "Azure DevOps Server 2020",
           "description": "The configuration settings for use with Azure DevOps Server 2020",
@@ -96,25 +103,25 @@
         "title": "Login with Azure DevOps"
       },
       {
-        "command": "taskSearch.refreshWorkItems",
+        "command": "taskglass.refreshWorkItems",
         "title": "Refresh",
         "category": "Tasks",
         "icon": "$(refresh)"
       },
       {
-        "command": "taskSearch.copyWorkItemId",
+        "command": "taskglass.copyWorkItemId",
         "title": "Copy Work Item Id",
         "category": "Tasks",
         "icon": "$(copy)"
       },
       {
-        "command": "taskSearch.associateWorkItemId",
+        "command": "taskglass.associateWorkItemId",
         "title": "Associate Work Item With Commit",
         "category": "Tasks",
         "icon": "$(associate-work-item)"
       },
       {
-        "command": "taskSearch.changeProjects",
+        "command": "taskglass.changeProjects",
         "title": "Change Projects",
         "category": "Tasks",
         "icon": "$(plug)"
@@ -123,43 +130,43 @@
     "views": {
       "scm": [
         {
-          "id": "taskSearch",
-          "name": "Task Search"
+          "id": "taskglass",
+          "name": "Task Glass"
         }
       ]
     },
     "menus": {
       "view/title": [
         {
-          "command": "taskSearch.refreshWorkItems",
-          "when": "view == taskSearch",
+          "command": "taskglass.refreshWorkItems",
+          "when": "view == taskglass",
           "group": "navigation"
         },
         {
-          "command": "taskSearch.changeProjects",
-          "when": "view == taskSearch",
+          "command": "taskglass.changeProjects",
+          "when": "view == taskglass",
           "group": "navigation"
         }
       ],
       "view/item/context": [
         {
-          "command": "taskSearch.copyWorkItemId",
-          "when": "view == taskSearch",
+          "command": "taskglass.copyWorkItemId",
+          "when": "view == taskglass",
           "group": "inline"
         },
         {
-          "command": "taskSearch.associateWorkItemId",
-          "when": "view == taskSearch",
+          "command": "taskglass.associateWorkItemId",
+          "when": "view == taskglass",
           "group": "inline"
         }
       ],
       "commandPalette": [
         {
-          "command": "taskSearch.copyWorkItemId",
+          "command": "taskglass.copyWorkItemId",
           "when": "false"
         },
         {
-          "command": "taskSearch.associateWorkItemId",
+          "command": "taskglass.associateWorkItemId",
           "when": "false"
         }
       ]

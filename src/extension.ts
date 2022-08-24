@@ -26,19 +26,19 @@ export async function activate(context: vscode.ExtensionContext) {
   console.log(context.globalStorageUri);
 
   const treeDataProvider = new AzureDevOpsTreeDataProvider([]);
-  context.subscriptions.push(vscode.window.createTreeView('taskSearch', { treeDataProvider }));
+  context.subscriptions.push(vscode.window.createTreeView('taskglass', { treeDataProvider }));
 
   refreshWorkItemsAsync(treeDataProvider);
 
-  vscode.commands.registerCommand('taskSearch.refreshWorkItems', async () => {
+  vscode.commands.registerCommand('taskglass.refreshWorkItems', async () => {
     refreshWorkItemsAsync(treeDataProvider);
   });
 
-  vscode.commands.registerCommand('taskSearch.copyWorkItemId', async (workItem: WorkItem) => {
+  vscode.commands.registerCommand('taskglass.copyWorkItemId', async (workItem: WorkItem) => {
     await vscode.env.clipboard.writeText(workItem.id.toString());
   });
 
-  vscode.commands.registerCommand('taskSearch.changeProjects', async () => {
+  vscode.commands.registerCommand('taskglass.changeProjects', async () => {
     const newProject = await selectProjectAsync();
     if (!newProject) {
       return;
@@ -46,10 +46,10 @@ export async function activate(context: vscode.ExtensionContext) {
 
     const workspaceConfig = vscode.workspace.getConfiguration('tasks');
     await workspaceConfig.update('activeProject', newProject, vscode.ConfigurationTarget.Global);
-    vscode.commands.executeCommand('taskSearch.refreshWorkItems');
+    vscode.commands.executeCommand('taskglass.refreshWorkItems');
   });
 
-  vscode.commands.registerCommand('taskSearch.associateWorkItemId', async (workItem: WorkItem) => {
+  vscode.commands.registerCommand('taskglass.associateWorkItemId', async (workItem: WorkItem) => {
     const gitExtension = Git.getGitExtension();
 
     if (!gitExtension) {
@@ -125,7 +125,7 @@ async function refreshWorkItemsAsync(treeDataProvider: AzureDevOpsTreeDataProvid
 }
 
 function getAzureDevOpsSource(): AzureDevOpsSource | undefined {
-  const workspaceConfig = vscode.workspace.getConfiguration('tasks');
+  const workspaceConfig = vscode.workspace.getConfiguration('taskglass');
   const activeSource = workspaceConfig.get<string>('activeSource');
 
   switch (activeSource) {
