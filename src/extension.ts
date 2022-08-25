@@ -306,6 +306,10 @@ function mapRelations(relations: any[]): WorkItemRelation[] {
     return !!item;
   };
 
+  if (!relations) {
+    return [];
+  }
+
   return relations.map((x) => mapRelation(x)).filter(isRelation);
 }
 
