@@ -12,6 +12,7 @@ import { Git } from './git';
 import { AzureDevOpsServicesSettings } from './settings/azure-devops-services-settings.interface';
 import { AzureDevOpsServerSettings } from './settings/azure-devops-server-settings.interface';
 import { AzureDevOpsServerSource } from './azuredevops/sources/azure-devops-server-source';
+import { firstValueFrom, forkJoin } from 'rxjs';
 
 export async function activate(context: vscode.ExtensionContext) {
   context.subscriptions.push(
@@ -257,8 +258,6 @@ async function getWorkItemDetailFlat(
   project: string,
   ids: ReadonlyArray<number>
 ): Promise<ReadonlyArray<WorkItem>> {
-  //todo: chunk requests into blocks of 500
-
   if (ids.length === 0) {
     return [];
   }
@@ -267,38 +266,54 @@ async function getWorkItemDetailFlat(
     createIfNone: true,
   });
 
-  const url = new AzureDevOpsUrlBuilder(source)
-    .withProject(project)
-    .withRoute('_apis/wit/workitems')
-    .withQueryParam('ids', ids.join(','))
-    .withQueryParam('$expand', 'relations')
-    .toString();
+  const urls = [...chunk(ids, 500)].map((chunk) =>
+    new AzureDevOpsUrlBuilder(source)
+      .withProject(project)
+      .withRoute('_apis/wit/workitems')
+      .withQueryParam('ids', chunk.join(','))
+      .withQueryParam('$expand', 'relations')
+      .toString()
+  );
 
-  const response = await fetch(url, {
-    method: 'GET',
-    headers: {
-      Accept: 'application/json',
-      'Content-Type': 'application/json',
-      Authorization: `Basic ${Buffer.from(`:${session.accessToken}`).toString('base64')}`,
-    },
-  });
+  const requests = urls.map((url) =>
+    fetch(url, {
+      method: 'GET',
+      headers: {
+        Accept: 'application/json',
+        'Content-Type': 'application/json',
+        Authorization: `Basic ${Buffer.from(`:${session.accessToken}`).toString('base64')}`,
+      },
+    })
+  );
 
-  if (!response.ok) {
-    throw new Error(response.statusText);
+  const responses = await firstValueFrom(forkJoin(requests));
+  const workItems: WorkItem[] = [];
+
+  for (const response of responses) {
+    if (!response.ok) {
+      throw new Error(response.statusText);
+    }
+
+    const bodyJson = await response.json();
+    const responseItems = (bodyJson.value as any[]).map<WorkItem>((x: any) => ({
+      id: x.id,
+      url: x.url,
+      state: x.fields['System.State'],
+      type: x.fields['System.WorkItemType'],
+      title: x.fields['System.Title'],
+      relations: mapRelations(x.relations),
+    }));
+
+    workItems.push(...responseItems);
   }
 
-  const bodyJson = await response.json();
-
-  const workItems = (bodyJson.value as any[]).map<WorkItem>((x: any) => ({
-    id: x.id,
-    url: x.url,
-    state: x.fields['System.State'],
-    type: x.fields['System.WorkItemType'],
-    title: x.fields['System.Title'],
-    relations: mapRelations(x.relations),
-  }));
-
   return workItems;
+}
+
+function* chunk<T>(source: ReadonlyArray<T>, size: number): Generator<T[], void> {
+  for (let i = 0; i < source.length; i += size) {
+    yield source.slice(i, i + size);
+  }
 }
 
 function mapRelations(relations: any[]): WorkItemRelation[] {
