@@ -275,15 +275,56 @@ async function getWorkItemDetailFlat(
     createIfNone: true,
   });
 
-  const urls = [...chunk(ids, 500)].map((chunk) =>
+  // Chunk ids so that each request has a maximum of 500 ids (limit of Azure DevOps Api)
+  let urlBuilders = [...chunk(ids, 500)].map((chunk) =>
     new AzureDevOpsUrlBuilder(source)
       .withProject(project)
       .withRoute('_apis/wit/workitems')
       .withQueryParam('ids', chunk.join(','))
       .withQueryParam('$expand', 'relations')
-      .toString()
   );
 
+  // Ensure that each url is under the max allowed character limit
+  const maxUrlLength = 2000;
+  while (Math.max(...urlBuilders.map((u) => u.length)) > maxUrlLength) {
+    const newUrlBuilders: AzureDevOpsUrlBuilder[] = [];
+    for (const urlBuilder of urlBuilders) {
+      if (urlBuilder.length <= maxUrlLength) {
+        newUrlBuilders.push(urlBuilder);
+        continue;
+      }
+
+      const idsQueryString = urlBuilder.getQueryParam('ids');
+
+      if (idsQueryString === null) {
+        throw new Error('ids query string returned null');
+      }
+
+      const ids = idsQueryString?.split(',');
+      const half = Math.ceil(ids.length / 2);
+
+      const firstIdsSet = ids.slice(0, half);
+      const secondIdsSet = ids.slice(half);
+
+      newUrlBuilders.push(
+        new AzureDevOpsUrlBuilder(source)
+          .withProject(project)
+          .withRoute('_apis/wit/workitems')
+          .withQueryParam('ids', firstIdsSet.join(','))
+          .withQueryParam('$expand', 'relations'),
+        new AzureDevOpsUrlBuilder(source)
+          .withProject(project)
+          .withRoute('_apis/wit/workitems')
+          .withQueryParam('ids', secondIdsSet.join(','))
+          .withQueryParam('$expand', 'relations')
+      );
+    }
+
+    urlBuilders = newUrlBuilders;
+  }
+
+  // Make the request
+  const urls = urlBuilders.map((u) => u.toString());
   const requests = urls.map((url) =>
     fetch(url, {
       method: 'GET',

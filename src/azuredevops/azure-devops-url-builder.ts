@@ -28,6 +28,14 @@ export class AzureDevOpsUrlBuilder {
     return this;
   }
 
+  public getQueryParam(name: string): string | null {
+    return this._queryParams.get(name);
+  }
+
+  public get length(): number {
+    return this.toString().length;
+  }
+
   public toString(): string {
     const url = new URL(this._routeParts.join('/'), this._source.baseUrl);
 
