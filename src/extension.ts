@@ -1,5 +1,14 @@
 import 'isomorphic-fetch';
-import * as vscode from 'vscode';
+import {
+  authentication,
+  window,
+  commands,
+  env,
+  workspace,
+  ExtensionContext,
+  ConfigurationTarget,
+  ProgressLocation,
+} from 'vscode';
 import { AzureDevOpsPatAuthenticationProvider } from './auth/azuredevops-pat-auth-provider';
 import { AzureDevOpsTreeDataProvider } from './azuredevops-tree-data-provider';
 import { AzureDevOpsUrlBuilder } from './azuredevops/azure-devops-url-builder';
@@ -14,9 +23,9 @@ import { AzureDevOpsServerSettings } from './settings/azure-devops-server-settin
 import { AzureDevOpsServerSource } from './azuredevops/sources/azure-devops-server-source';
 import { firstValueFrom, forkJoin } from 'rxjs';
 
-export async function activate(context: vscode.ExtensionContext) {
+export async function activate(context: ExtensionContext) {
   context.subscriptions.push(
-    vscode.authentication.registerAuthenticationProvider(
+    authentication.registerAuthenticationProvider(
       AzureDevOpsPatAuthenticationProvider.id,
       'Azure DevOps',
       new AzureDevOpsPatAuthenticationProvider(context.secrets)
@@ -27,46 +36,46 @@ export async function activate(context: vscode.ExtensionContext) {
   console.log(context.globalStorageUri);
 
   const treeDataProvider = new AzureDevOpsTreeDataProvider([]);
-  context.subscriptions.push(vscode.window.createTreeView('taskglass', { treeDataProvider }));
+  context.subscriptions.push(window.createTreeView('taskglass', { treeDataProvider }));
 
   refreshWorkItemsAsync(treeDataProvider);
 
-  vscode.commands.registerCommand('taskglass.refreshWorkItems', async () => {
+  commands.registerCommand('taskglass.refreshWorkItems', async () => {
     refreshWorkItemsAsync(treeDataProvider);
   });
 
-  vscode.commands.registerCommand('taskglass.copyWorkItemId', async (workItem: WorkItem) => {
-    await vscode.env.clipboard.writeText(workItem.id.toString());
+  commands.registerCommand('taskglass.copyWorkItemId', async (workItem: WorkItem) => {
+    await env.clipboard.writeText(workItem.id.toString());
   });
 
-  vscode.commands.registerCommand('taskglass.changeProjects', async () => {
+  commands.registerCommand('taskglass.changeProjects', async () => {
     const newProject = await selectProjectAsync();
     if (!newProject) {
       return;
     }
 
-    const workspaceConfig = vscode.workspace.getConfiguration('tasks');
-    await workspaceConfig.update('activeProject', newProject, vscode.ConfigurationTarget.Global);
-    vscode.commands.executeCommand('taskglass.refreshWorkItems');
+    const workspaceConfig = workspace.getConfiguration('tasks');
+    await workspaceConfig.update('activeProject', newProject, ConfigurationTarget.Global);
+    commands.executeCommand('taskglass.refreshWorkItems');
   });
 
-  vscode.commands.registerCommand('taskglass.associateWorkItemId', async (workItem: WorkItem) => {
+  commands.registerCommand('taskglass.associateWorkItemId', async (workItem: WorkItem) => {
     const gitExtension = Git.getGitExtension();
 
     if (!gitExtension) {
-      vscode.window.showErrorMessage('Git extension is not enabled');
+      window.showErrorMessage('Git extension is not enabled');
       return;
     }
 
-    const workspaceFolder = vscode.workspace.workspaceFolders?.[0];
+    const workspaceFolder = workspace.workspaceFolders?.[0];
     if (!workspaceFolder) {
-      vscode.window.showErrorMessage('No workspace folder found');
+      window.showErrorMessage('No workspace folder found');
       return;
     }
 
     const gitRepository = Git.getRepository(workspaceFolder.uri);
     if (!gitRepository) {
-      vscode.window.showErrorMessage('No git repository found for active workspace');
+      window.showErrorMessage('No git repository found for active workspace');
       return;
     }
 
@@ -92,7 +101,7 @@ async function selectProjectAsync(): Promise<string | undefined> {
   }
 
   const projects = await getProjectsAsync(source);
-  const selected = await vscode.window.showQuickPick(projects, { canPickMany: false, title: 'Select a project' });
+  const selected = await window.showQuickPick(projects, { canPickMany: false, title: 'Select a project' });
   return selected;
 }
 
@@ -103,13 +112,13 @@ async function refreshWorkItemsAsync(treeDataProvider: AzureDevOpsTreeDataProvid
   }
   const project = getSavedActiveProject();
   if (!project) {
-    vscode.window.showErrorMessage('No active project selected');
+    window.showErrorMessage('No active project selected');
     return;
   }
 
-  await vscode.window.withProgress(
+  await window.withProgress(
     {
-      location: vscode.ProgressLocation.Window,
+      location: ProgressLocation.Window,
       cancellable: false,
       title: 'Loading work items',
     },
@@ -126,14 +135,14 @@ async function refreshWorkItemsAsync(treeDataProvider: AzureDevOpsTreeDataProvid
 }
 
 function getAzureDevOpsSource(): AzureDevOpsSource | undefined {
-  const workspaceConfig = vscode.workspace.getConfiguration('taskglass');
+  const workspaceConfig = workspace.getConfiguration('taskglass');
   const activeSource = workspaceConfig.get<string>('activeSource');
 
   switch (activeSource) {
     case 'AzureDevOps Services':
       const serviceSettings = workspaceConfig.get<AzureDevOpsServicesSettings>('azureDevopsServices');
       if (!serviceSettings) {
-        vscode.window.showErrorMessage('The Azure DevOps Services settings must be defined');
+        window.showErrorMessage('The Azure DevOps Services settings must be defined');
         return undefined;
       }
 
@@ -141,7 +150,7 @@ function getAzureDevOpsSource(): AzureDevOpsSource | undefined {
     case 'AzureDevOps Server 2020':
       const serverSettings = workspaceConfig.get<AzureDevOpsServerSettings>('azureDevopsServer2020');
       if (!serverSettings) {
-        vscode.window.showErrorMessage('The Azure DevOps Server 2020 settings must be defined');
+        window.showErrorMessage('The Azure DevOps Server 2020 settings must be defined');
         return undefined;
       }
       return new AzureDevOpsServerSource(
@@ -156,12 +165,12 @@ function getAzureDevOpsSource(): AzureDevOpsSource | undefined {
 }
 
 function getSavedActiveProject(): string | undefined {
-  const workspaceConfig = vscode.workspace.getConfiguration('tasks');
+  const workspaceConfig = workspace.getConfiguration('tasks');
   return workspaceConfig.get<string>('activeProject');
 }
 
 async function getProjectsAsync(source: AzureDevOpsSource): Promise<ReadonlyArray<string>> {
-  const session = await vscode.authentication.getSession(AzureDevOpsPatAuthenticationProvider.id, [], {
+  const session = await authentication.getSession(AzureDevOpsPatAuthenticationProvider.id, [], {
     createIfNone: true,
   });
 
@@ -184,7 +193,7 @@ async function getProjectsAsync(source: AzureDevOpsSource): Promise<ReadonlyArra
 }
 
 async function getWorkItems(source: AzureDevOpsSource, project: string): Promise<ReadonlyArray<number>> {
-  const session = await vscode.authentication.getSession(AzureDevOpsPatAuthenticationProvider.id, [], {
+  const session = await authentication.getSession(AzureDevOpsPatAuthenticationProvider.id, [], {
     createIfNone: true,
   });
 
@@ -262,7 +271,7 @@ async function getWorkItemDetailFlat(
     return [];
   }
 
-  const session = await vscode.authentication.getSession(AzureDevOpsPatAuthenticationProvider.id, [], {
+  const session = await authentication.getSession(AzureDevOpsPatAuthenticationProvider.id, [], {
     createIfNone: true,
   });
 

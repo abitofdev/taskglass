@@ -1,15 +1,15 @@
-import * as vscode from 'vscode';
+import { EventEmitter, ProviderResult, TreeDataProvider, TreeItem, TreeItemCollapsibleState, Event } from 'vscode';
 import { HierarchicalWorkItem } from './azuredevops/hierarchical-work-item.interface';
 
-export class AzureDevOpsTreeDataProvider implements vscode.TreeDataProvider<HierarchicalWorkItem> {
-  private _onDidChangeTreeData = new vscode.EventEmitter<void>();
+export class AzureDevOpsTreeDataProvider implements TreeDataProvider<HierarchicalWorkItem> {
+  private _onDidChangeTreeData = new EventEmitter<void>();
 
   constructor(private _workItems: ReadonlyArray<HierarchicalWorkItem>) {}
 
-  public getTreeItem(element: HierarchicalWorkItem): vscode.TreeItem {
-    const treeItem = new vscode.TreeItem(
+  public getTreeItem(element: HierarchicalWorkItem): TreeItem {
+    const treeItem = new TreeItem(
       element.title,
-      element.children.length > 0 ? vscode.TreeItemCollapsibleState.Collapsed : vscode.TreeItemCollapsibleState.None
+      element.children.length > 0 ? TreeItemCollapsibleState.Collapsed : TreeItemCollapsibleState.None
     );
 
     treeItem.tooltip = `${element.type}-${element.title}`;
@@ -17,7 +17,7 @@ export class AzureDevOpsTreeDataProvider implements vscode.TreeDataProvider<Hier
     return treeItem;
   }
 
-  public getChildren(element?: HierarchicalWorkItem): vscode.ProviderResult<HierarchicalWorkItem[]> {
+  public getChildren(element?: HierarchicalWorkItem): ProviderResult<HierarchicalWorkItem[]> {
     if (!element) {
       return [...this._workItems];
     }
@@ -30,7 +30,7 @@ export class AzureDevOpsTreeDataProvider implements vscode.TreeDataProvider<Hier
     this._onDidChangeTreeData.fire();
   }
 
-  public get onDidChangeTreeData(): vscode.Event<void> {
+  public get onDidChangeTreeData(): Event<void> {
     return this._onDidChangeTreeData.event;
   }
 }
