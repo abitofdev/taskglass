@@ -1,9 +1,9 @@
 {
   "name": "taskglass",
-  "displayName": "Task Glass",
+  "displayName": "Taskglass",
   "description": "Does something todo with tasks",
   "publisher": "abitofdev",
-  "version": "0.0.4",
+  "version": "0.0.5",
   "icon": "resources/icon.png",
   "engines": {
     "vscode": "^1.70.0"
@@ -94,7 +94,7 @@
       "associate-work-item": {
         "description": "Associate work item to commit",
         "default": {
-          "fontPath": "./resources/icons.woff",
+          "fontPath": "./resources/custom_icons.woff",
           "fontCharacter": "\\e900"
         }
       }
@@ -107,25 +107,25 @@
       {
         "command": "taskglass.refreshWorkItems",
         "title": "Refresh",
-        "category": "Task Glass",
+        "category": "Taskglass",
         "icon": "$(refresh)"
       },
       {
         "command": "taskglass.copyWorkItemId",
         "title": "Copy Work Item Id",
-        "category": "Task Glass",
+        "category": "Taskglass",
         "icon": "$(copy)"
       },
       {
         "command": "taskglass.associateWorkItemId",
         "title": "Associate Work Item With Commit",
-        "category": "Task Glass",
+        "category": "Taskglass",
         "icon": "$(associate-work-item)"
       },
       {
         "command": "taskglass.changeProjects",
         "title": "Change Projects",
-        "category": "Task Glass",
+        "category": "Taskglass",
         "icon": "$(plug)"
       }
     ],
@@ -133,7 +133,7 @@
       "scm": [
         {
           "id": "taskglass",
-          "name": "Task Glass"
+          "name": "Taskglass"
         }
       ]
     },
