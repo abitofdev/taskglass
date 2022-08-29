@@ -1,4 +1,4 @@
-# TaskGlass
+![](doc/images/banner.png)
 
 ## Features
 

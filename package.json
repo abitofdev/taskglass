@@ -1,10 +1,13 @@
 {
   "name": "taskglass",
   "displayName": "Taskglass",
-  "description": "Does something todo with tasks",
+  "description": "View and associate tasks with git commits.",
   "publisher": "abitofdev",
-  "version": "0.0.5",
+  "version": "0.0.6",
   "icon": "resources/icon.png",
+  "repository": {
+    "url": "https://github.com/abitofdev/taskglass"
+  },
   "engines": {
     "vscode": "^1.70.0"
   },
@@ -20,7 +23,6 @@
   ],
   "activationEvents": [
     "onView:taskglass",
-    "onCommand:vscode-AzureDevOpsPatAuthenticationProvider-sample.login",
     "onAuthenticationRequest:AzureDevOpsPAT"
   ],
   "main": "./out/main.js",
