@@ -29,20 +29,6 @@
   "contributes": {
     "configuration": {
       "properties": {
-        "taskglass.activeSource": {
-          "type": "string",
-          "default": "AzureDevOps Services",
-          "description": "The active source to use for tasks",
-          "order": 0,
-          "enum": [
-            "AzureDevOps Services",
-            "AzureDevOps Server 2020"
-          ],
-          "enumDescriptions": [
-            "The cloud hosted version of Azure DevOps.",
-            "The self-hosted version, of Azure DevOps 2020."
-          ]
-        },
         "taskglass.azureDevopsServices": {
           "type": "object",
           "title": "Azure DevOps Services",

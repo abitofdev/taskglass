@@ -23,11 +23,6 @@ export async function activate(context: ExtensionContext) {
   //todo: to use for the images
   console.log(context.globalStorageUri);
 
-  const source = getAzureDevOpsSource();
-  if (!source) {
-    return;
-  }
-
   const treeDataProvider = new DeferredTreeDataProvider([]);
   context.subscriptions.push(window.createTreeView('taskglass', { treeDataProvider }));
 
@@ -77,8 +72,8 @@ export async function activate(context: ExtensionContext) {
 export function deactivate() {}
 
 async function refreshWorkItemsAsync(treeDataProvider: DeferredTreeDataProvider) {
-  const source = getAzureDevOpsSource();
-  if (!source) {
+  const sources = getAzureDevOpsSources();
+  if (!sources || sources.length === 0) {
     return;
   }
 
@@ -91,7 +86,7 @@ async function refreshWorkItemsAsync(treeDataProvider: DeferredTreeDataProvider)
     async (progress) => {
       progress.report({ increment: 0 });
 
-      const nodes = [new AzureDevOpsSourceNode(source)];
+      const nodes = sources.map((source) => new AzureDevOpsSourceNode(source));
       treeDataProvider.refresh(nodes);
 
       progress.report({ increment: 100 });
@@ -99,32 +94,26 @@ async function refreshWorkItemsAsync(treeDataProvider: DeferredTreeDataProvider)
   );
 }
 
-function getAzureDevOpsSource(): AzureDevOpsSource | undefined {
+function getAzureDevOpsSources(): AzureDevOpsSource[] {
   const workspaceConfig = workspace.getConfiguration('taskglass');
-  const activeSource = workspaceConfig.get<string>('activeSource');
+  const sources: AzureDevOpsSource[] = [];
 
-  switch (activeSource) {
-    case 'AzureDevOps Services':
-      const serviceSettings = workspaceConfig.get<AzureDevOpsServicesSettings>('azureDevopsServices');
-      if (!serviceSettings) {
-        window.showErrorMessage('The Azure DevOps Services settings must be defined');
-        return undefined;
-      }
+  const serviceSettings = workspaceConfig.get<AzureDevOpsServicesSettings>('azureDevopsServices');
+  if (serviceSettings) {
+    sources.push(new AzureDevOpsServicesSource(serviceSettings.organization));
+  }
 
-      return new AzureDevOpsServicesSource(serviceSettings.organization);
-    case 'AzureDevOps Server 2020':
-      const serverSettings = workspaceConfig.get<AzureDevOpsServerSettings>('azureDevopsServer2020');
-      if (!serverSettings) {
-        window.showErrorMessage('The Azure DevOps Server 2020 settings must be defined');
-        return undefined;
-      }
-      return new AzureDevOpsServerSource(
+  const serverSettings = workspaceConfig.get<AzureDevOpsServerSettings>('azureDevopsServer2020');
+  if (serverSettings) {
+    sources.push(
+      new AzureDevOpsServerSource(
         serverSettings.scheme,
         serverSettings.instance,
         serverSettings.collection,
         serverSettings.port
-      );
+      )
+    );
   }
 
-  return undefined;
+  return sources;
 }
