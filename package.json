@@ -123,12 +123,6 @@
         "title": "Associate Work Item With Commit",
         "category": "Taskglass",
         "icon": "$(associate-work-item)"
-      },
-      {
-        "command": "taskglass.changeProjects",
-        "title": "Change Projects",
-        "category": "Taskglass",
-        "icon": "$(plug)"
       }
     ],
     "views": {
@@ -145,22 +139,17 @@
           "command": "taskglass.refreshWorkItems",
           "when": "view == taskglass",
           "group": "navigation"
-        },
-        {
-          "command": "taskglass.changeProjects",
-          "when": "view == taskglass",
-          "group": "navigation"
         }
       ],
       "view/item/context": [
         {
           "command": "taskglass.copyWorkItemId",
-          "when": "view == taskglass",
+          "when": "view == taskglass && viewItem == azureDevOpsWorkItem",
           "group": "inline"
         },
         {
           "command": "taskglass.associateWorkItemId",
-          "when": "view == taskglass",
+          "when": "view == taskglass && viewItem == azureDevOpsWorkItem",
           "group": "inline"
         }
       ],

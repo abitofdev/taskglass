@@ -16,4 +16,8 @@ export class AzureDevOpsServerSource extends AzureDevOpsSource {
     const url = new URL(`${scheme}://${instanceName}:${port}/${collection}/`);
     super(url);
   }
+
+  public get name(): string {
+    return this.instanceName;
+  }
 }

@@ -4,4 +4,6 @@ export abstract class AzureDevOpsSource {
   public abstract readonly apiVersion: string;
 
   constructor(readonly baseUrl: URL) {}
+
+  public abstract get name(): string;
 }

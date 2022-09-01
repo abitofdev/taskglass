@@ -10,4 +10,8 @@ export class AzureDevOpsServicesSource extends AzureDevOpsSource {
     const url = new URL(`https://dev.azure.com/${organization}/`);
     super(url);
   }
+
+  public get name(): string {
+    return this.organization;
+  }
 }
