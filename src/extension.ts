@@ -115,5 +115,5 @@ function getAzureDevOpsSources(): AzureDevOpsSource[] {
     );
   }
 
-  return sources;
+  return sources.sort((a, b) => a.name.localeCompare(b.name));
 }
