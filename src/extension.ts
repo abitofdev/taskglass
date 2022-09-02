@@ -99,12 +99,12 @@ function getAzureDevOpsSources(): AzureDevOpsSource[] {
   const sources: AzureDevOpsSource[] = [];
 
   const serviceSettings = workspaceConfig.get<AzureDevOpsServicesSettings>('azureDevopsServices');
-  if (serviceSettings) {
+  if (serviceSettings && serviceSettings.organization) {
     sources.push(new AzureDevOpsServicesSource(serviceSettings.organization));
   }
 
   const serverSettings = workspaceConfig.get<AzureDevOpsServerSettings>('azureDevopsServer2020');
-  if (serverSettings) {
+  if (serverSettings && serverSettings.instance) {
     sources.push(
       new AzureDevOpsServerSource(
         serverSettings.scheme,
