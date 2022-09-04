@@ -9,7 +9,7 @@ export class AzureDevOpsWorkNode extends DeferredNode {
     private readonly _workItem: WorkItem,
     private readonly _childNodes: AzureDevOpsWorkNode[]
   ) {
-    super('azureDevOpsWorkItem', _workItem.title, _workItem.id.toString(), _workItem.state);
+    super('azureDevOpsWorkItem', _workItem.title, `#${_workItem.id}`, _workItem.state);
   }
 
   public get id(): number {
