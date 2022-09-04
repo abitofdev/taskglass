@@ -3,7 +3,7 @@
   "displayName": "Taskglass",
   "description": "View and associate tasks with git commits.",
   "publisher": "abitofdev",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "icon": "resources/icon.png",
   "repository": {
     "url": "https://github.com/abitofdev/taskglass"
