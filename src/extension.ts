@@ -24,7 +24,7 @@ export async function activate(context: ExtensionContext) {
     )
   );
 
-  WorkItemIconCache.updateIconMapAsync().then((x) => console.log('icon cache refreshed!'));
+  WorkItemIconCache.updateIconMapAsync();
 
   const treeDataProvider = new DeferredTreeDataProvider([]);
   context.subscriptions.push(window.createTreeView('taskglass', { treeDataProvider }));
