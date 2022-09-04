@@ -3,6 +3,7 @@ import { authentication } from 'vscode';
 import { AzureDevOpsPatAuthenticationProvider } from '../../auth/azuredevops-pat-auth-provider';
 import { DeferredNode } from '../../tree/deferred-node';
 import { AzureDevOpsUrlBuilder } from '../azure-devops-url-builder';
+import { WorkItemIconCache } from '../cache/work-item-icon-cache';
 import { AzureDevOpsRequestHeaderProvider } from '../providers/azure-devops-request-header-provider';
 import { AzureDevOpsSource } from '../sources/azure-devops-source';
 import { WorkItemRelation, WorkItemRelationType } from '../work-item-relation.interface';
@@ -90,14 +91,14 @@ export class AzureDevOpsProjectNode extends DeferredNode {
     // Map tree structure to AzureDevOpsWorkNode
     const mapWorkItem = (workItem: WorkItemWithChildren): AzureDevOpsWorkNode => {
       if (workItem.children.length === 0) {
-        return new AzureDevOpsWorkNode(workItem, []);
+        return new AzureDevOpsWorkNode(this._project, workItem, []);
       }
 
       const children = workItem.children
         .map((workItem) => mapWorkItem(workItem))
         .filter((x): x is AzureDevOpsWorkNode => !!x);
 
-      return new AzureDevOpsWorkNode(workItem, children);
+      return new AzureDevOpsWorkNode(this._project, workItem, children);
     };
 
     return roots.map((x) => mapWorkItem(x));
@@ -189,6 +190,10 @@ export class AzureDevOpsProjectNode extends DeferredNode {
 
       workItems.push(...responseItems);
     }
+
+    const unique = [...new Set(workItems.map((item) => item.type))];
+    const icons = unique.map((type) => WorkItemIconCache.ensureIconCachedAsync(this._source, this._project, type));
+    await Promise.all(icons);
 
     return workItems;
   }

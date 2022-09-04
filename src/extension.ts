@@ -10,8 +10,12 @@ import { AzureDevOpsServerSource } from './azuredevops/sources/azure-devops-serv
 import { DeferredTreeDataProvider } from './tree/deferred-tree-data-provider';
 import { AzureDevOpsSourceNode } from './azuredevops/nodes/azure-devops-source-node';
 import { AzureDevOpsWorkNode } from './azuredevops/nodes/azure-devops-work-node';
+import { ExtensionContextProvider } from './providers/extension-context-provider';
+import { WorkItemIconCache } from './azuredevops/cache/work-item-icon-cache';
 
 export async function activate(context: ExtensionContext) {
+  new ExtensionContextProvider(context);
+
   context.subscriptions.push(
     authentication.registerAuthenticationProvider(
       AzureDevOpsPatAuthenticationProvider.id,
@@ -20,8 +24,7 @@ export async function activate(context: ExtensionContext) {
     )
   );
 
-  //todo: to use for the images
-  console.log(context.globalStorageUri);
+  WorkItemIconCache.updateIconMapAsync();
 
   const treeDataProvider = new DeferredTreeDataProvider([]);
   context.subscriptions.push(window.createTreeView('taskglass', { treeDataProvider }));
@@ -99,12 +102,12 @@ function getAzureDevOpsSources(): AzureDevOpsSource[] {
   const sources: AzureDevOpsSource[] = [];
 
   const serviceSettings = workspaceConfig.get<AzureDevOpsServicesSettings>('azureDevopsServices');
-  if (serviceSettings) {
+  if (serviceSettings && serviceSettings.organization) {
     sources.push(new AzureDevOpsServicesSource(serviceSettings.organization));
   }
 
   const serverSettings = workspaceConfig.get<AzureDevOpsServerSettings>('azureDevopsServer2020');
-  if (serverSettings) {
+  if (serverSettings && serverSettings.instance) {
     sources.push(
       new AzureDevOpsServerSource(
         serverSettings.scheme,
