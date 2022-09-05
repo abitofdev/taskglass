@@ -29,6 +29,10 @@
   "contributes": {
     "configuration": {
       "properties": {
+        "taskglass.showOnlyAssignedToMe": {
+          "type": "boolean",
+          "title": "Show items assigned to me"
+        },
         "taskglass.azureDevopsServices": {
           "type": "object",
           "title": "Azure DevOps Services",
@@ -109,6 +113,12 @@
         "title": "Associate Work Item With Commit",
         "category": "Taskglass",
         "icon": "$(associate-work-item)"
+      },
+      {
+        "command": "taskglass.toggleAssignedToMe",
+        "title": "Toggle Assigned To Me",
+        "category": "Taskglass",
+        "icon": "$(smiley)"
       }
     ],
     "views": {
@@ -124,7 +134,12 @@
         {
           "command": "taskglass.refreshWorkItems",
           "when": "view == taskglass",
-          "group": "navigation"
+          "group": "navigation@2"
+        },
+        {
+          "command": "taskglass.toggleAssignedToMe",
+          "when": "view == taskglass",
+          "group": "navigation@1"
         }
       ],
       "view/item/context": [
