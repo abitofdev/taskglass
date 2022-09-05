@@ -1,5 +1,5 @@
 import { firstValueFrom, forkJoin } from 'rxjs';
-import { authentication } from 'vscode';
+import { authentication, workspace } from 'vscode';
 import { AzureDevOpsPatAuthenticationProvider } from '../../auth/azuredevops-pat-auth-provider';
 import { DeferredNode } from '../../tree/deferred-node';
 import { AzureDevOpsUrlBuilder } from '../azure-devops-url-builder';
@@ -32,10 +32,17 @@ export class AzureDevOpsProjectNode extends DeferredNode {
       .withRoute('_apis/wit/wiql')
       .toString();
 
+    let whereClause = `Where [System.TeamProject] = '${this._project}' AND [State] <> 'Closed' AND [State] <> 'Removed' `;
+
+    const assignedToMe = workspace.getConfiguration('taskglass').get<boolean>('showOnlyAssignedToMe');
+    if (assignedToMe) {
+      whereClause += 'AND [Assigned to] = @Me ';
+    }
+
     const searchQuery =
       'Select [System.Id], [System.AssignedTo], [System.State], [System.Title], [System.Tags] ' +
       'From WorkItems ' +
-      `Where [System.TeamProject] = '${this._project}' AND [State] <> 'Closed' AND [State] <> 'Removed' ` +
+      whereClause +
       'order by [Microsoft.VSTS.Common.Priority] asc, [System.CreatedDate] desc';
 
     const body = JSON.stringify({
@@ -82,7 +89,9 @@ export class AzureDevOpsProjectNode extends DeferredNode {
       }
 
       const parentIndex = workItemIndexMap.get(parent.url);
-      if (parentIndex !== undefined) {
+      if (parentIndex === undefined) {
+        roots.push(workItem);
+      } else {
         const parentWorkItem = treeWorkItems[parentIndex];
         parentWorkItem.children.push(workItem);
       }

@@ -1,5 +1,14 @@
 import 'isomorphic-fetch';
-import { authentication, window, commands, env, workspace, ExtensionContext, ProgressLocation } from 'vscode';
+import {
+  authentication,
+  window,
+  commands,
+  env,
+  workspace,
+  ExtensionContext,
+  ProgressLocation,
+  ConfigurationTarget,
+} from 'vscode';
 import { AzureDevOpsPatAuthenticationProvider } from './auth/azuredevops-pat-auth-provider';
 import { AzureDevOpsServicesSource } from './azuredevops/sources/azure-devops-services-source';
 import { AzureDevOpsSource } from './azuredevops/sources/azure-devops-source';
@@ -33,6 +42,17 @@ export async function activate(context: ExtensionContext) {
 
   commands.registerCommand('taskglass.refreshWorkItems', async () => {
     refreshWorkItemsAsync(treeDataProvider);
+  });
+
+  commands.registerCommand('taskglass.toggleAssignedToMe', async () => {
+    try {
+      const config = await workspace.getConfiguration('taskglass');
+      const assignedToMe = config.get<boolean>('showOnlyAssignedToMe');
+      await config.update('showOnlyAssignedToMe', !assignedToMe, ConfigurationTarget.Global);
+      refreshWorkItemsAsync(treeDataProvider);
+    } catch (e) {
+      console.log(e);
+    }
   });
 
   commands.registerCommand('taskglass.copyWorkItemId', async (workItem: AzureDevOpsWorkNode) => {
